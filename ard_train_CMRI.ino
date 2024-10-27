@@ -15,13 +15,14 @@ uint8_t servonum = 0;   // servo counter
 uint8_t lastservo = 16;
 
 Adafruit_PWMServoDriver pwm1 = Adafruit_PWMServoDriver(0x40);    //setup the board address 0
-// Adafruit_PWMServoDriver pwm2 = Adafruit_PWMServoDriver(0x41);    //setup the board address 1
+//Adafruit_PWMServoDriver pwm2 = Adafruit_PWMServoDriver(0x41);    //setup the board address 1
 Auto485 bus(DE_PIN,-1,Serial2); // Arduino pin 2 -> MAX485 DE and RE pins
 CMRI cmri(CMRI_ADDR, 24, 48, bus); // addr, input bits, output bits, bus
 
 // Initialize I2C MCP23017
-//Adafruit_MCP23X17 mcp0;
+Adafruit_MCP23X17 mcp0;
 Adafruit_MCP23X17 mcp1;
+Adafruit_MCP23X17 mcp2;
 
 byte UpdateOutputValue=1;
 byte OutputValue[6];   //Each byte is 8 bits - 8x6 48 bits
@@ -34,15 +35,15 @@ void setup()
     Serial.begin(9600);
     bus.begin(9600, SERIAL_8N2);
     pwm1.begin();
-    // pwm2.begin();
+    //pwm2.begin();
     pwm1.setPWMFreq(60);
-    // pwm2.setPWMFreq(60);
+    //pwm2.setPWMFreq(60);
 
     // Define MCP23017 modules
     // addresses from 0x20 - 0x27
-    //mcp0.begin_I2C(0x20); // 16-Inputs, handled by hardware pins 27 - 42.
-    mcp1.begin_I2C(0x20); // 16-Outputs, would be 0x21
-    //mcp2.begin_I2C(0x22); // 16-Outputs, handled by hardware pins 3 - 13, 22 - 26.
+    mcp0.begin_I2C(0x20); // 16-Inputs
+    mcp1.begin_I2C(0x21); // 16-Outputs
+    mcp2.begin_I2C(0x22); // 16-Outputs
 
     InitializePortsMCP23017();
 
@@ -153,28 +154,27 @@ void LoadInputValues()
 byte ReturnValueEnteredMCP23017(byte bInput)
 {
     byte bValue;
-    /*// Input ports 0 - MCP23017 0 / Port A
+    // Input ports 0 - MCP23017 0 / Port A
     if (bInput==0) bValue=mcp0.readGPIO(0);
     // Input ports 1 - MCP23017 0 / Port B
-    if (bInput==1) bValue=mcp0.readGPIO(1);*/
-    int inpPins[16] = {27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42};
+    if (bInput==1) bValue=mcp0.readGPIO(1);
+    /*int inpPins[16] = {27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42};
     int iVal = 0;
     for (int i=0; i<8; i++) {
       if (bInput == 0) iVal = i;
       else if (bInput == 1) iVal = (i+8);
       bitWrite(bValue,i,digitalRead(inpPins[iVal])? 1:0);
     }
-    // Returns bValue
+    // Returns bValue*/
     return bValue;
 }
 
 void InitializePortsMCP23017()
 {
     //Module 0 - Input, Hardware Pins
-    int inpPins[16] = {27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42};
     for (int p=0; p<16; p++)
     {
-        pinMode(inpPins[p], INPUT_PULLUP);
+        mcp0.pinMode(p, INPUT_PULLUP);
     }
     //Module 1 - Output, MCP23017 Pins
     for (int p=0; p<16; p++)
@@ -182,9 +182,9 @@ void InitializePortsMCP23017()
         mcp1.pinMode(p, OUTPUT);
     }
     //Module 2 - Output, hardware pins
-    for (int p=27; p<=42; p++)
+    for (int p=0; p<=16; p++)
     {
-        pinMode(p, OUTPUT);
+        mcp2.pinMode(p, OUTPUT);
     }
 }
 
@@ -199,16 +199,16 @@ void UpdateOutput()
     mcp1.writeGPIOAB(tmpAB);
 
     // Output ports 4 and 5 (32 to 48)- MCP23017 2
-    /*tmpAB = OutputValue[5];
+    tmpAB = OutputValue[5];
     tmpAB <<= 8;
     tmpAB |= OutputValue[4];
-    mcp2.writeGPIOAB(tmpAB);*/
-    int pinsA[8] = {3,4,5,6,7,8,9,10};
+    mcp2.writeGPIOAB(tmpAB);
+    /*int pinsA[8] = {3,4,5,6,7,8,9,10};
     int pinsB[8] = {11,12,13,22,23,24,25,26};
     for (int i=0; i<8; i++) {
       digitalWrite(pinsA[i],bitRead(OutputValue[5],i)? HIGH:LOW);
     }
     for (int i=0; i<8; i++) {
       digitalWrite(pinsB[i],bitRead(OutputValue[4],i)? HIGH:LOW);
-    }
+    }*/
 }
